@@ -1,0 +1,16 @@
+ipykernel
+pandas
+requests
+beautifulsoup4
+yfinance
+# Sentiment Analysis
+transformers
+torch
+tqdm
+numpy
+matplotlib
+seaborn
+ipywidgets
+scikit-learn
+statsmodels
+scipy
