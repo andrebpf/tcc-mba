@@ -82,7 +82,7 @@ def aggregate_daily_sentiment(
         DataFrame with daily aggregated sentiment metrics
     """
     # Apply date adjustment row by row (After-Market and Weekend)
-    print("Aplicando ajuste de datas (After-Market e Fim de Semana)...")
+    print("Applying date adjustments (After-Market and Weekend)...")
     # Call handle_market_hours to get 'trading_date'
     df = handle_market_hours(df, date_column)
     

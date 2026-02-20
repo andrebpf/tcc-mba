@@ -1,131 +1,131 @@
-# 📊 MBA-TCC: Análise de Sentimento e Mercado
+# MBA TCC: Sentiment Analysis and Market Correlation
 
-Este projeto realiza a coleta de notícias financeiras, análise de sentimento usando o modelo **FinBERT-PT-BR** e estuda a correlação desses sentimentos com os retornos do índice BOVA11.
+This project collects Brazilian financial news, analyzes their sentiment using **FinBERT-PT-BR**, and studies the correlation between daily sentiment scores and BOVA11 log-returns.
 
-## 🛠️ Configuração do Ambiente Python
+**Research period:** January 1, 2025 – December 31, 2025
+**Author:** André Furlanetti
 
-Este projeto utiliza um ambiente virtual para gerenciar as dependências.
+---
 
-### Configuração Automática (Windows/PowerShell)
+## Setup
 
-Execute o comando abaixo para criar/ativar o ambiente e instalar as dependências:
+### Automatic (Windows / PowerShell)
 
 ```powershell
 .\setup_env.ps1
 ```
 
-### Configuração Manual
+This creates the virtual environment, installs all dependencies, and registers the Jupyter kernel.
 
-1. **Criar o ambiente virtual:**
-   ```powershell
-   python -m venv .venv
-   ```
+### Manual
 
-2. **Ativar o ambiente:**
-   ```powershell
-   .\.venv\Scripts\Activate.ps1
-   ```
-
-3. **Instalar dependências:**
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-4. **Registrar Kernel do Jupyter (para arquivos .ipynb):**
-   ```powershell
-   python -m ipykernel install --user --name=mba-tcc --display-name "Python (mba-tcc)"
-   ```
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m ipykernel install --user --name=mba-tcc --display-name "Python (mba-tcc)"
+```
 
 ---
 
-## 📅 Ordem de Execução dos Notebooks
+## Pipeline Execution Order
 
-Os notebooks estão localizados no diretório `notebooks/` e devem ser executados na seguinte ordem:
+### Step 0 — Collect market data (run once)
 
-### 1️⃣ `01_news_scraper.ipynb`
-**Objetivo**: Coletar notícias do InfoMoney via API para termos específicos.
+```powershell
+python src/cotation/collect_market_data.py
+python src/cotation/calculate_log_returns.py
+```
 
-**O que faz**:
-- 🔍 Busca notícias por termos (ex: Itaú, Dólar, Petrobras, Vale).
-- 📅 Filtra por período inicial definido.
-- 💾 Salva resultados individuais e consolida em um único dataset CSV.
-
-**Arquivos gerados**:
-- `src/dataset/scraper/search/news_[termo]_[data].csv`
-- `src/dataset/scraper/consolidated_news_[data].csv`
+These scripts download BOVA11 historical prices from Yahoo Finance and compute log-returns, saving CSVs to `src/dataset/market_data/`.
 
 ---
 
-### 2️⃣ `02_sentiment_analysis.ipynb`
-**Objetivo**: Processar as notícias coletadas e gerar scores de sentimento.
+### Notebook 1 — `01_news_scraper.ipynb`
 
-**O que faz**:
-- ✅ Carrega o modelo FinBERT-PT-BR (com suporte a GPU).
-- 🧪 Valida o modelo com exemplos manuais.
-- 🤖 Processa o dataset consolidado de notícias.
-- 📊 Gera análise exploratória (distribuição de sentimentos).
-- 📅 Agrega sentimentos por data.
+Collects financial news from InfoMoney via their WordPress REST API.
 
-**Arquivos gerados**:
-- `src/dataset/sentiment/news_with_sentiment.csv` - Notícias com scores individuais.
-- `src/dataset/sentiment/daily_sentiment.csv` - Sentimento agregado por dia.
+- Searches by term (Ibovespa, BOVA11, Petrobras, Vale, Itaú, etc.)
+- Filters by date range (2025-01-01 to 2025-12-31)
+- Deduplicates and keyword-filters the consolidated dataset
+
+**Output files:**
+- `src/dataset/scraper/search/news_[term]_[date].csv` — per-term raw results
+- `src/dataset/scraper/consolidated_news_[date].csv` — deduplicated, filtered dataset
 
 ---
 
-### 3️⃣ `03_sentiment_market_merge.ipynb`
-**Objetivo**: Unificar os dados de sentimento com os retornos do BOVA11.
+### Notebook 2 — `02_sentiment_analysis.ipynb`
 
-**O que faz**:
-- 📂 Carrega o sentimento diário e os retornos do mercado.
-- 🔄 Realiza merge inteligente por data (join entre notícias e pregões).
-- 📈 Cria variáveis defasadas (lags t-1, t-2, t-3) para análise preditiva.
-- 🔍 Análise de correlação e visualização de tendências.
+Runs sentiment inference on all collected news using FinBERT-PT-BR.
 
-**Arquivo gerado**:
-- `src/dataset/final/sentiment_returns_merged.csv` - Dataset final pronto para modelagem estatística.
+- Loads the model with GPU (CUDA) support if available
+- Manual validation against labeled samples (classification report + confusion matrix)
+- Batch inference producing `prob_neg`, `prob_neu`, `prob_pos`, `sentiment_score`
+- Exploratory analysis of score distribution
+- Daily aggregation with market-hour adjustment (news after 18:00 → next trading day)
 
----
-
-## 🚀 Como Executar
-
-### Pré-requisitos
-
-1. **Ative o ambiente virtual** (conforme seção de Setup).
-2. **Dados de Mercado**: Certifique-se de ter o arquivo `src/dataset/market_data/BOVA11_log_returns_*.csv`. Caso não tenha, execute o script:
-   ```powershell
-   python src/cotation/calculate_log_returns.py
-   ```
-
-### Executando os Notebooks
-
-- **VS Code**: Abra os notebooks na pasta `notebooks/`, selecione o kernel `Python (mba-tcc)` e execute as células.
-- **Jupyter**: No terminal, execute `jupyter lab` ou `jupyter notebook`.
+**Output files:**
+- `src/dataset/sentiment/news_with_sentiment.csv` — all news with individual scores
+- `src/dataset/sentiment/daily_sentiment.csv` — daily aggregated sentiment metrics
 
 ---
 
-## 📊 Estrutura de Pastas de Dados
+### Notebook 3 — `03_sentiment_market_merge.ipynb`
+
+Merges sentiment data with BOVA11 returns and runs statistical analysis.
+
+- Inner join between daily sentiment and trading days
+- Creates lagged features (t-1, t-2, t-3) for predictive analysis
+- OLS regression: simple (sentiment_mean → Log_Return) and multiple (with lags)
+- Pearson correlation tests with significance levels
+- Augmented Dickey-Fuller stationarity tests
+- Granger causality tests (both directions)
+- Rolling 30-day correlation visualization
+
+**Output file:**
+- `src/dataset/result/sentiment_returns_merged.csv` — final dataset ready for statistical modeling
+
+---
+
+## Running the Notebooks
+
+- **VS Code**: Open notebooks in `notebooks/`, select the `Python (mba-tcc)` kernel, and run cells.
+- **Jupyter**: Run `jupyter lab` or `jupyter notebook` from the project root.
+
+---
+
+## Data Folder Structure
 
 ```
 src/dataset/
-├── scraper/          # Notícias brutas e consolidadas
-├── market_data/      # Dados históricos do BOVA11 e retornos
-├── sentiment/        # Sentimentos processados e agregados
-└── final/            # Dataset final unificado
+├── market_data/    # BOVA11 raw prices and log-returns
+├── scraper/        # Raw and consolidated news CSVs
+├── sentiment/      # Per-article and daily aggregated sentiment
+└── result/         # Final merged dataset
 ```
 
----
-
-## ⚙️ Configurações e Solução de Problemas
-
-### GPU e Performance
-O processamento de sentimento é pesado. Se possuir uma GPU NVIDIA, o código a utilizará automaticamente via CUDA. Ajuste o `batch_size` no notebook `02_sentiment_analysis.ipynb` (ex: 32, 64) conforme sua VRAM.
-
-### Erro "CUDA out of memory"
-Reduza o `batch_size` (ex: 8 ou 16) caso receba este erro durante a análise de sentimento.
+> The `src/dataset/` directory is excluded from git (see `.gitignore`).
 
 ---
 
-## 📚 Referências
+## GPU Configuration
 
-- **Modelo**: [lucas-adrian/FinBERT-PT-BR](https://huggingface.co/lucas-adrian/FinBERT-PT-BR)
-- **Paper**: Santos et al. (2023) - FinBERT-PT-BR
+Sentiment inference uses CUDA automatically when an NVIDIA GPU is available. Adjust `batch_size` in notebook 2 based on available VRAM:
+
+| VRAM   | Recommended batch_size |
+|--------|------------------------|
+| 4 GB   | 32                     |
+| 8 GB   | 64                     |
+| 16 GB+ | 128                    |
+
+If you get a `CUDA out of memory` error, reduce `batch_size` to 8 or 16.
+
+---
+
+## References
+
+- **Model**: [lucas-leme/FinBERT-PT-BR](https://huggingface.co/lucas-leme/FinBERT-PT-BR)
+- **Paper**: Santos et al. (2023) — FinBERT-PT-BR
+- **Market data**: [yfinance](https://github.com/ranaroussi/yfinance) (Yahoo Finance)
+- **News source**: [InfoMoney](https://www.infomoney.com.br) WordPress REST API
