@@ -70,8 +70,19 @@ News (InfoMoney API) ──► Scraper ──► CSV
 
 | File | Purpose |
 |------|---------|
-| `CONTEXT.md` | Master project specification — read this for full methodology details |
+| `CONTEXT.md` | Master project specification + preliminary results — read this for full methodology details |
+| `Docs/[Resultados preliminares]...docx` | Preliminary results document (source data for CONTEXT.md §6) |
 | `src/sentiment/sentiment_analyzer.py` | Core NLP inference, batch processing, GPU support |
 | `src/sentiment/daily_aggregation.py` | Market-hour-aware aggregation + lag features + merge |
 | `src/scraper/scraper.py` | InfoMoney WordPress REST API pagination |
 | `src/utils/logger.py` | Shared logger — use `setup_logger(__name__)` in new modules |
+
+## Preliminary Results Summary (InfoMoney only, jan–dez/2025)
+
+- **Corpus:** 5.909 headlines (from 32.538 raw, after dedup + thematic filter)
+- **FinBERT-PT-BR validation:** accuracy 76.77%, F1-macro 0.77 (n=155 manual audit)
+- **Sentiment distribution:** 46.6% negative, 31.0% neutral, 22.4% positive; mean = -0.2194
+- **Pearson correlation:** r = +0.2529 (p < 0.001) — **contemporaneous only**, lags 1–5 n.s.
+- **OLS:** coeff +0.0161 (p < 0.001), R² = 0.064
+- **Granger causality:** Retorno → Sentimento (significant, all lags); Sentimento → Retorno (n.s.) — **reactive media**
+- **Next step:** Add ≥1 more news source to test if predictive signal emerges with larger/diverse corpus
