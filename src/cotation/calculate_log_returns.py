@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-import os
 from typing import Optional
 from datetime import datetime
+
+from src.config import MARKET_DATA_DIR
 
 
 def calculate_log_returns(csv_path: str, output_path: Optional[str] = None) -> pd.DataFrame:
@@ -60,12 +61,16 @@ def main():
     """
     Main execution: loads the most recent BOVA11 data and calculates log-returns.
     """
-    # Get the market data directory
-    script_dir = os.path.dirname(__file__)
-    market_data_dir = os.path.join(script_dir, '..', 'dataset', 'market_data')
-    
+    if not MARKET_DATA_DIR.exists():
+        print(f"ERROR: Market data directory not found: {MARKET_DATA_DIR}")
+        return
+
     # Find the most recent BOVA11 CSV file
-    csv_files = [f for f in os.listdir(market_data_dir) if f.startswith('BOVA11_') and f.endswith('.csv')]
+    csv_files = [
+        f.name
+        for f in MARKET_DATA_DIR.iterdir()
+        if f.name.startswith('BOVA11_') and f.name.endswith('.csv')
+    ]
     
     if not csv_files:
         print("ERROR: No BOVA11 CSV files found in market_data directory")
@@ -75,12 +80,12 @@ def main():
     csv_files.sort(reverse=True)
     latest_file = csv_files[0]
     
-    input_path = os.path.join(market_data_dir, latest_file)
+    input_path = MARKET_DATA_DIR / latest_file
     
     # Create output filename with log_returns prefix
     today = datetime.now().strftime("%Y%m%d")
     output_filename = f"BOVA11_log_returns_{today}.csv"
-    output_path = os.path.join(market_data_dir, output_filename)
+    output_path = MARKET_DATA_DIR / output_filename
     
     # Calculate log-returns
     df = calculate_log_returns(input_path, output_path)

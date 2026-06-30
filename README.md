@@ -1,23 +1,80 @@
-# MBA TCC: Sentiment Analysis and Market Correlation
+# MBA Thesis: Financial News Sentiment and BOVA11 Returns
 
-This project collects Brazilian financial news, analyzes their sentiment using **FinBERT-PT-BR**, and studies the correlation between daily sentiment scores and BOVA11 log-returns.
+This repository contains the data pipeline and analysis notebooks for an MBA thesis on the relationship between Brazilian financial news headline sentiment and daily BOVA11 ETF log returns.
 
-**Research period:** January 1, 2025 – December 31, 2025
-**Author:** André Furlanetti
+The project collects headlines from Brazilian financial news portals, classifies sentiment with **FinBERT-PT-BR**, aggregates daily sentiment, merges it with BOVA11 market returns, and evaluates contemporaneous and lagged relationships with correlation, OLS regression, stationarity tests, and Granger causality.
 
----
+**Research period:** January 1, 2025 to December 31, 2025  
+**Author:** André Baconcelo Prado Furlanetti  
+**Thesis source:** `Docs/tcc.tex`
+
+## Research Design
+
+- **Text sources:** InfoMoney, MoneyTimes, and Exame
+- **Text unit:** headlines only, not full article bodies
+- **Market proxy:** BOVA11 ETF adjusted close prices from Yahoo Finance through `yfinance`
+- **Sentiment model:** `lucas-leme/FinBERT-PT-BR`
+- **Sentiment score:** `sentiment_score = prob_pos - prob_neg`
+- **Market-hours rule:** headlines published after 18:00 are assigned to the next business day
+- **Return formula:** `R_t = ln(P_t / P_{t-1})`
+
+Portuguese search terms and scraped headlines are intentionally kept in Portuguese because the corpus, filters, and FinBERT-PT-BR model depend on Brazilian Portuguese text.
+
+## Current Thesis Results
+
+Based on the current thesis source in `Docs/tcc.tex`:
+
+| Metric | Result |
+|--------|--------|
+| Final headline corpus | 19,021 headlines |
+| Sources | InfoMoney, MoneyTimes, Exame |
+| Manual validation sample | 155 headlines |
+| FinBERT-PT-BR validation | 76.77% accuracy, 0.77 macro F1 |
+| Final paired trading-day sample | 247 observations |
+| Pearson correlation, lag 0 | r = +0.36, p < 0.001 |
+| Pearson correlations, lags 1-5 | Not statistically significant |
+| Simple OLS | beta = +0.031, p < 0.001, R2 = 0.128 |
+| Multiple OLS | R2 = 0.157; contemporaneous sentiment remains significant |
+| Granger causality | Return -> sentiment significant at lags 1-4; sentiment -> return significant at lags 2-4 |
+
+Interpretation: headline sentiment is mainly a coincident indicator of BOVA11 returns, consistent with the media feedback hypothesis. The multi-source corpus also shows suggestive, limited evidence that aggregate sentiment may contain short-lag predictive information.
+
+## Repository Layout
+
+```text
+tcc-mba/
+├── Docs/                 # Thesis source, compiled thesis files, and supporting materials
+├── data/                 # Generated datasets, excluded from git
+│   ├── market_data/      # BOVA11 adjusted prices and log returns
+│   ├── scraper/          # Raw and consolidated news CSVs
+│   ├── sentiment/        # Article-level and daily sentiment outputs
+│   └── result/           # Final sentiment-return merged dataset
+├── notebooks/            # Collection, sentiment, and statistical analysis notebooks
+├── reports/
+│   └── figures/          # Generated figures and chart source tables, excluded from git
+├── src/
+│   ├── config.py         # Central project paths
+│   ├── cotation/         # BOVA11 market data collection and log-return calculation
+│   ├── scraper/          # WordPress REST API collection helpers
+│   ├── sentiment/        # FinBERT inference, daily aggregation, merge helpers
+│   └── utils/            # Shared utilities
+├── AGENTS.md             # Codex guidance
+├── CLAUDE.md             # Claude Code guidance
+├── requirements.txt
+└── setup_env.ps1
+```
 
 ## Setup
 
-### Automatic (Windows / PowerShell)
+### Automatic Setup on Windows
 
 ```powershell
 .\setup_env.ps1
 ```
 
-This creates the virtual environment, installs all dependencies, and registers the Jupyter kernel.
+This creates the virtual environment, installs dependencies, and registers the Jupyter kernel.
 
-### Manual
+### Manual Setup
 
 ```powershell
 python -m venv .venv
@@ -26,106 +83,74 @@ pip install -r requirements.txt
 python -m ipykernel install --user --name=mba-tcc --display-name "Python (mba-tcc)"
 ```
 
----
+## Pipeline
 
-## Pipeline Execution Order
-
-### Step 0 — Collect market data (run once)
+### 1. Collect Market Data
 
 ```powershell
 python src/cotation/collect_market_data.py
 python src/cotation/calculate_log_returns.py
 ```
 
-These scripts download BOVA11 historical prices from Yahoo Finance and compute log-returns, saving CSVs to `src/dataset/market_data/`.
+Outputs are saved under `data/market_data/`.
 
----
+### 2. Scrape and Consolidate News
 
-### Notebook 1 — `01_news_scraper.ipynb`
+Run `notebooks/01_news_scraper.ipynb`.
 
-Collects financial news from InfoMoney via their WordPress REST API.
+The notebook collects headlines from InfoMoney, MoneyTimes, and Exame through their WordPress REST APIs, deduplicates by URL, applies thematic keyword filtering, and writes source-level and combined CSV files.
 
-- Searches by term (Ibovespa, BOVA11, Petrobras, Vale, Itaú, etc.)
-- Filters by date range (2025-01-01 to 2025-12-31)
-- Deduplicates and keyword-filters the consolidated dataset
+Typical outputs:
 
-**Output files:**
-- `src/dataset/scraper/search/news_[term]_[date].csv` — per-term raw results
-- `src/dataset/scraper/consolidated_news_[date].csv` — deduplicated, filtered dataset
+- `data/scraper/[run_date]/[source]/news_[term]_[date].csv`
+- `data/scraper/[run_date]/consolidated_[source].csv`
+- `data/scraper/[run_date]/combined_news.csv`
+- `data/scraper/[run_date]/combined_news_filtered.csv`
 
----
+### 3. Run Sentiment Analysis
 
-### Notebook 2 — `02_sentiment_analysis.ipynb`
+Run `notebooks/02_sentiment_analysis.ipynb`.
 
-Runs sentiment inference on all collected news using FinBERT-PT-BR.
+The notebook loads FinBERT-PT-BR, validates the model against a manually labeled sample, performs batch inference, computes `sentiment_score`, and aggregates sentiment by adjusted trading day.
 
-- Loads the model with GPU (CUDA) support if available
-- Manual validation against labeled samples (classification report + confusion matrix)
-- Batch inference producing `prob_neg`, `prob_neu`, `prob_pos`, `sentiment_score`
-- Exploratory analysis of score distribution
-- Daily aggregation with market-hour adjustment (news after 18:00 → next trading day)
+Typical outputs:
 
-**Output files:**
-- `src/dataset/sentiment/news_with_sentiment.csv` — all news with individual scores
-- `src/dataset/sentiment/daily_sentiment.csv` — daily aggregated sentiment metrics
+- `data/sentiment/news_with_sentiment.csv`
+- `data/sentiment/news_with_sentiment_combined_[run_date].csv`
+- `data/sentiment/daily_sentiment.csv`
+- validation and sentiment figures under `reports/figures/`
 
----
+### 4. Merge With Market Returns and Analyze
 
-### Notebook 3 — `03_sentiment_market_merge.ipynb`
+Run `notebooks/03_sentiment_market_merge.ipynb`.
 
-Merges sentiment data with BOVA11 returns and runs statistical analysis.
+The notebook merges daily sentiment with BOVA11 log returns, creates lagged sentiment variables, runs stationarity tests, Pearson correlations, OLS regressions, Granger causality tests, and rolling-correlation visualizations.
 
-- Inner join between daily sentiment and trading days
-- Creates lagged features (t-1, t-2, t-3) for predictive analysis
-- OLS regression: simple (sentiment_mean → Log_Return) and multiple (with lags)
-- Pearson correlation tests with significance levels
-- Augmented Dickey-Fuller stationarity tests
-- Granger causality tests (both directions)
-- Rolling 30-day correlation visualization
+Typical outputs:
 
-**Output file:**
-- `src/dataset/result/sentiment_returns_merged.csv` — final dataset ready for statistical modeling
+- `data/result/sentiment_returns_merged.csv`
+- correlation, regression, time-series, and rolling-correlation figures under `reports/figures/`
 
----
+## Running Notebooks
 
-## Running the Notebooks
+- **VS Code:** open the notebooks in `notebooks/` and select the `Python (mba-tcc)` kernel.
+- **Jupyter:** run `jupyter lab` or `jupyter notebook` from the project root.
 
-- **VS Code**: Open notebooks in `notebooks/`, select the `Python (mba-tcc)` kernel, and run cells.
-- **Jupyter**: Run `jupyter lab` or `jupyter notebook` from the project root.
+## GPU Notes
 
----
+Sentiment inference uses CUDA automatically when an NVIDIA GPU is available. Adjust `batch_size` in notebook 2 based on available VRAM.
 
-## Data Folder Structure
+| VRAM | Recommended batch size |
+|------|------------------------|
+| 4 GB | 32 |
+| 8 GB | 64 |
+| 16 GB+ | 128 |
 
-```
-src/dataset/
-├── market_data/    # BOVA11 raw prices and log-returns
-├── scraper/        # Raw and consolidated news CSVs
-├── sentiment/      # Per-article and daily aggregated sentiment
-└── result/         # Final merged dataset
-```
-
-> The `src/dataset/` directory is excluded from git (see `.gitignore`).
-
----
-
-## GPU Configuration
-
-Sentiment inference uses CUDA automatically when an NVIDIA GPU is available. Adjust `batch_size` in notebook 2 based on available VRAM:
-
-| VRAM   | Recommended batch_size |
-|--------|------------------------|
-| 4 GB   | 32                     |
-| 8 GB   | 64                     |
-| 16 GB+ | 128                    |
-
-If you get a `CUDA out of memory` error, reduce `batch_size` to 8 or 16.
-
----
+If CUDA runs out of memory, reduce `batch_size` to 8 or 16.
 
 ## References
 
-- **Model**: [lucas-leme/FinBERT-PT-BR](https://huggingface.co/lucas-leme/FinBERT-PT-BR)
-- **Paper**: Santos et al. (2023) — FinBERT-PT-BR
-- **Market data**: [yfinance](https://github.com/ranaroussi/yfinance) (Yahoo Finance)
-- **News source**: [InfoMoney](https://www.infomoney.com.br) WordPress REST API
+- **Model:** [lucas-leme/FinBERT-PT-BR](https://huggingface.co/lucas-leme/FinBERT-PT-BR)
+- **Market data:** [yfinance](https://github.com/ranaroussi/yfinance)
+- **News sources:** [InfoMoney](https://www.infomoney.com.br), [MoneyTimes](https://www.moneytimes.com.br), [Exame](https://exame.com)
+- **Maintained thesis narrative:** `Docs/tcc.tex`

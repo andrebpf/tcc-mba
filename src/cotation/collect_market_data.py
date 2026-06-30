@@ -1,7 +1,9 @@
-import yfinance as yf
-import pandas as pd
-import os
 from datetime import datetime
+
+import yfinance as yf
+
+from src.config import MARKET_DATA_DIR
+
 
 def collect_market_data(ticker="BOVA11.SA", start_date="2025-01-01"):
     """
@@ -40,13 +42,12 @@ def collect_market_data(ticker="BOVA11.SA", start_date="2025-01-01"):
         final_df.columns = ['Date', 'Adj Close']
         
         # Ensure output directory exists
-        output_dir = os.path.join(os.path.dirname(__file__), '..', 'dataset', 'market_data')
-        os.makedirs(output_dir, exist_ok=True)
+        MARKET_DATA_DIR.mkdir(parents=True, exist_ok=True)
         
         # Filename
         today = datetime.now().strftime("%Y%m%d")
         filename = f"{ticker.replace('.SA', '')}_{today}.csv"
-        filepath = os.path.join(output_dir, filename)
+        filepath = MARKET_DATA_DIR / filename
         
         # Save
         final_df.to_csv(filepath, index=False)
