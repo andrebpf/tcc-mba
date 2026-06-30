@@ -8,6 +8,7 @@ __pycache__/
 
 # References
 Docs/
+.claude/
 
 # Distribution / packaging
 .Python
