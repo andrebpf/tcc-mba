@@ -11,7 +11,6 @@ MBA thesis project studying the relationship between Brazilian financial news he
 - **Text sources:** InfoMoney, MoneyTimes, and Exame
 - **Market proxy:** BOVA11, using adjusted close prices from Yahoo Finance via `yfinance`
 - **Sentiment model:** `lucas-leme/FinBERT-PT-BR`
-- **Primary maintained research source:** `Docs/tcc.tex`
 
 ## Language Rules
 
@@ -23,10 +22,6 @@ Keep Portuguese text when it is part of the research domain or model input:
 - scraped headlines and URLs
 - manual labels or validation samples
 - FinBERT-PT-BR input examples
-- original source document filenames under `Docs/`
-
-Do not modify files under `Docs/` unless the user explicitly asks for thesis document edits.
-
 ## Setup
 
 ```powershell
@@ -42,15 +37,15 @@ pip install -r requirements.txt
 python -m ipykernel install --user --name=mba-tcc --display-name "Python (mba-tcc)"
 ```
 
-## Pipeline Execution Order
+## Notebook Workflow
 
-1. **Collect market data:** `src/cotation/collect_market_data.py`
-2. **Calculate log returns:** `src/cotation/calculate_log_returns.py`
-3. **Scrape news:** `src/scraper/scraper.py` or `notebooks/01_news_scraper.ipynb`
-4. **Run sentiment analysis:** `src/sentiment/sentiment_analyzer.py` or `notebooks/02_sentiment_analysis.ipynb`
-5. **Aggregate and merge:** `src/sentiment/daily_aggregation.py` or `notebooks/03_sentiment_market_merge.ipynb`
+The notebooks are the primary workflow. They call reusable Python modules under `src/`.
 
-Runnable script entry points:
+1. **Scrape and consolidate news:** `notebooks/01_news_scraper.ipynb`
+2. **Run sentiment analysis:** `notebooks/02_sentiment_analysis.ipynb`
+3. **Merge with market returns and analyze:** `notebooks/03_sentiment_market_merge.ipynb`
+
+Selected modules can still be run directly for quick testing or artifact regeneration:
 
 ```powershell
 python src/cotation/collect_market_data.py
@@ -84,7 +79,6 @@ Financial news APIs ──► Scraper ──► CSV
 - `data/result/`: final sentiment-return merged dataset
 - `reports/figures/`: generated figures and chart source tables
 - `notebooks/`: exploratory and final analysis notebooks
-- `Docs/`: thesis source and compiled thesis artifacts
 
 `data/` and generated report figures are excluded from git.
 
@@ -100,8 +94,6 @@ Financial news APIs ──► Scraper ──► CSV
 
 ## Current Thesis Results
 
-Based on the current thesis source in `Docs/tcc.tex`:
-
 - **Corpus:** 19,021 headlines from InfoMoney, MoneyTimes, and Exame after deduplication and thematic filtering.
 - **Manual validation:** stratified audit with n = 155; accuracy 76.77%; macro F1 = 0.77.
 - **Merged sample:** 247 paired trading-day observations after aligning sentiment and market returns.
@@ -116,7 +108,6 @@ Based on the current thesis source in `Docs/tcc.tex`:
 
 | File | Purpose |
 |------|---------|
-| `Docs/tcc.tex` | Current thesis source and authoritative research narrative |
 | `src/config.py` | Central project paths |
 | `src/scraper/scraper.py` | WordPress REST API collection helpers for supported news sources |
 | `src/sentiment/sentiment_analyzer.py` | FinBERT-PT-BR inference and scoring |

@@ -5,8 +5,7 @@ This repository contains the data pipeline and analysis notebooks for an MBA the
 The project collects headlines from Brazilian financial news portals, classifies sentiment with **FinBERT-PT-BR**, aggregates daily sentiment, merges it with BOVA11 market returns, and evaluates contemporaneous and lagged relationships with correlation, OLS regression, stationarity tests, and Granger causality.
 
 **Research period:** January 1, 2025 to December 31, 2025  
-**Author:** André Baconcelo Prado Furlanetti  
-**Thesis source:** `Docs/tcc.tex`
+**Author:** André Baconcelo Prado Furlanetti
 
 ## Research Design
 
@@ -21,8 +20,6 @@ The project collects headlines from Brazilian financial news portals, classifies
 Portuguese search terms and scraped headlines are intentionally kept in Portuguese because the corpus, filters, and FinBERT-PT-BR model depend on Brazilian Portuguese text.
 
 ## Current Thesis Results
-
-Based on the current thesis source in `Docs/tcc.tex`:
 
 | Metric | Result |
 |--------|--------|
@@ -43,7 +40,6 @@ Interpretation: headline sentiment is mainly a coincident indicator of BOVA11 re
 
 ```text
 tcc-mba/
-├── Docs/                 # Thesis source, compiled thesis files, and supporting materials
 ├── data/                 # Generated datasets, excluded from git
 │   ├── market_data/      # BOVA11 adjusted prices and log returns
 │   ├── scraper/          # Raw and consolidated news CSVs
@@ -83,18 +79,11 @@ pip install -r requirements.txt
 python -m ipykernel install --user --name=mba-tcc --display-name "Python (mba-tcc)"
 ```
 
-## Pipeline
+## Notebook Workflow
 
-### 1. Collect Market Data
+The notebooks are the primary workflow. They call reusable Python modules under `src/` for scraping, sentiment processing, aggregation, and market-data handling.
 
-```powershell
-python src/cotation/collect_market_data.py
-python src/cotation/calculate_log_returns.py
-```
-
-Outputs are saved under `data/market_data/`.
-
-### 2. Scrape and Consolidate News
+### 1. Scrape and Consolidate News
 
 Run `notebooks/01_news_scraper.ipynb`.
 
@@ -107,7 +96,7 @@ Typical outputs:
 - `data/scraper/[run_date]/combined_news.csv`
 - `data/scraper/[run_date]/combined_news_filtered.csv`
 
-### 3. Run Sentiment Analysis
+### 2. Run Sentiment Analysis
 
 Run `notebooks/02_sentiment_analysis.ipynb`.
 
@@ -120,7 +109,7 @@ Typical outputs:
 - `data/sentiment/daily_sentiment.csv`
 - validation and sentiment figures under `reports/figures/`
 
-### 4. Merge With Market Returns and Analyze
+### 3. Merge With Market Returns and Analyze
 
 Run `notebooks/03_sentiment_market_merge.ipynb`.
 
@@ -130,6 +119,20 @@ Typical outputs:
 
 - `data/result/sentiment_returns_merged.csv`
 - correlation, regression, time-series, and rolling-correlation figures under `reports/figures/`
+
+## Helper Scripts
+
+The notebooks are preferred for the full research flow, but selected modules can be run directly for testing or regenerating specific artifacts:
+
+```powershell
+python src/cotation/collect_market_data.py
+python src/cotation/calculate_log_returns.py
+python src/scraper/scraper.py
+python src/sentiment/sentiment_analyzer.py
+python src/sentiment/daily_aggregation.py
+```
+
+Market-data outputs are saved under `data/market_data/`.
 
 ## Running Notebooks
 
@@ -153,4 +156,3 @@ If CUDA runs out of memory, reduce `batch_size` to 8 or 16.
 - **Model:** [lucas-leme/FinBERT-PT-BR](https://huggingface.co/lucas-leme/FinBERT-PT-BR)
 - **Market data:** [yfinance](https://github.com/ranaroussi/yfinance)
 - **News sources:** [InfoMoney](https://www.infomoney.com.br), [MoneyTimes](https://www.moneytimes.com.br), [Exame](https://exame.com)
-- **Maintained thesis narrative:** `Docs/tcc.tex`
